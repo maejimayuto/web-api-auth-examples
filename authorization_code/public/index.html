@@ -28,6 +28,7 @@
         <div id="oauth">
         </div>
         <button class="btn btn-default" id="obtain-new-token">Obtain new token using the refresh token</button>
+        <button class="btn btn-default" id="get-followed-artists">Get followed artists</button>
       </div>
     </div>
 
@@ -132,6 +133,17 @@
                 access_token: access_token,
                 refresh_token: refresh_token
               });
+            });
+          }, false);
+
+          document.getElementById('get-followed-artists').addEventListener('click', function() {
+            $.ajax({
+              url: '/followed_artist',
+              data: {
+                'access_token': access_token
+              }
+            }).done(function(data) {
+              console.log(data);
             });
           }, false);
         }

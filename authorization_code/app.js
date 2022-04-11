@@ -9,6 +9,7 @@
 
 var express = require('express'); // Express web server framework
 var request = require('request'); // "Request" library
+var axios = require('axios');
 var cors = require('cors');
 var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
@@ -46,7 +47,7 @@ app.get('/login', function(req, res) {
   res.cookie(stateKey, state);
 
   // your application requests authorization
-  var scope = 'user-read-private user-read-email';
+  var scope = 'user-read-private user-read-email user-follow-read';
   res.redirect('https://accounts.spotify.com/authorize?' +
     querystring.stringify({
       response_type: 'code',
@@ -141,6 +142,47 @@ app.get('/refresh_token', function(req, res) {
       });
     }
   });
+});
+
+app.get('/followed_artist', function(req, res) {
+  var access_token = req.query.access_token;
+  var last_id = null;
+  var artist_list = [];
+
+  async function call_followed_artists(options) {
+    return await axios.get(options.url, options).then((res) => res.data);
+  }
+
+  async function get_following_artist(last_id) {
+    while (last_id !== 'last') {
+      var followed_artist_url = last_id ? 'https://api.spotify.com/v1/me/following?type=artist&after=' + last_id : 'https://api.spotify.com/v1/me/following?type=artist';
+      var options = {
+        url: followed_artist_url,
+        headers: { 'Authorization': 'Bearer ' + access_token },
+        json: true
+      };
+
+      body = await call_followed_artists(options);
+      artist_list = artist_list.concat(body.artists.items.map(function(artist) {
+        return [
+          '"' + artist.name + '"',
+          '"' + artist.genres.toString() + '"',
+          '"' + artist.images.map((image) => JSON.stringify(image).replaceAll(/\"/ig, "'")) + '"',
+          '"' + artist.external_urls.spotify + '"',
+          '"' + artist.id + '"'
+        ];
+      }));
+      last_id = body.artists.items[body.artists.items.length - 1] ? body.artists.items[body.artists.items.length - 1].id : 'last';
+
+      if (last_id === 'last') {
+        artist_list.forEach(function(artist) {
+          console.log(artist.toString()); // This is output
+        });
+      }
+      console.log('last_id: ', last_id);
+    }
+  }
+  get_following_artist(last_id);
 });
 
 console.log('Listening on 8888');
